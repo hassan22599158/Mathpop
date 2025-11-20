@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محرر المعادلات العربية</title>
+    <title>محرر المعادلات العربية والخرائط الذهنية</title>
     <link href="https://fonts.googleapis.com/css?family=Amiri" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Load marked.js for Markdown parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <!-- Load html2pdf.js for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body, html {
             height: 100%;
@@ -18,9 +21,69 @@
         }
 
         /* Layout */
+        .main-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .toolbar {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+        }
+
+        .toolbar h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            margin-left: auto;
+        }
+
+        .toolbar-btn {
+            background-color: #34495e;
+            border: 1px solid #46627f;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .toolbar-btn:hover {
+            background-color: #46627f;
+        }
+
+        .toolbar-select {
+            background-color: #34495e;
+            color: white;
+            border: 1px solid #46627f;
+            padding: 6px;
+            border-radius: 4px;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #34495e;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
         .app-container {
             display: flex;
-            height: 100vh;
+            flex: 1;
             flex-direction: row;
             overflow: hidden;
         }
@@ -34,7 +97,7 @@
         }
 
         .editor-pane {
-            border-left: 1px solid #e0e0e0; /* RTL: border-left is actually the separator if dir=rtl? No, flex direction follows dir. */
+            border-left: 1px solid #e0e0e0;
             background-color: #f9f9f9;
             display: flex;
             flex-direction: column;
@@ -42,7 +105,7 @@
 
         .preview-pane {
             background-color: #ffffff;
-            font-family: 'Amiri', serif; /* Default for reading content */
+            font-family: 'Amiri', serif;
             font-size: 18px;
             line-height: 1.6;
         }
@@ -57,26 +120,37 @@
             font-family: 'Consolas', 'Monaco', monospace;
             font-size: 16px;
             outline: none;
-            direction: ltr; /* Code is usually LTR */
-            text-align: right; /* But we want it right aligned for Arabic context? user choice. Let's keep LTR for code but maybe allow RTL typing. */
-            /* Actually, code editors usually default to LTR. But for Arabic text mixed in... */
-        }
-        /* Let's force LTR for the editor textarea for now as LaTeX is English-based, but text might be Arabic. */
-        textarea {
             direction: ltr;
             text-align: left;
         }
 
         /* Preview Styling */
         .preview-content {
-            max-width: 800px;
+            max-width: 100%;
             margin: 0 auto;
         }
 
-        .preview-content h1, .preview-content h2, .preview-content h3 {
+        /* Basic Markdown Styles */
+        .preview-content:not(.mindmap-active) h1,
+        .preview-content:not(.mindmap-active) h2,
+        .preview-content:not(.mindmap-active) h3 {
             border-bottom: 1px solid #eee;
             padding-bottom: 10px;
             margin-top: 20px;
+        }
+
+        .preview-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+        }
+        .preview-content th, .preview-content td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .preview-content th {
+            background-color: #f2f2f2;
         }
 
         .preview-content code {
@@ -95,23 +169,6 @@
             text-align: left;
         }
 
-        .preview-content blockquote {
-            border-right: 4px solid #ccc;
-            margin: 0;
-            padding-right: 15px;
-            color: #666;
-        }
-
-        /* Header/Toolbar if needed (optional) */
-        .toolbar {
-            background: #333;
-            color: #fff;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
         /* Scrollbars */
         ::-webkit-scrollbar {
             width: 8px;
@@ -126,6 +183,199 @@
         }
         ::-webkit-scrollbar-thumb:hover {
             background: #aaa;
+        }
+
+        /* --- MIND MAP STYLES --- */
+
+        /* Container */
+        .mindmap-container {
+            padding: 40px;
+            display: inline-block;
+            min-width: 100%;
+            text-align: center; /* Default center for vertical */
+        }
+
+        .mindmap-container ul {
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        /* Shared Node Styling (.tf-nc) */
+        .tf-nc {
+            display: inline-block;
+            position: relative;
+            padding: 15px 20px;
+            background-color: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            min-width: 140px;
+            z-index: 5;
+            margin: 10px;
+            vertical-align: middle;
+        }
+
+        .tf-nc:hover {
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        /* Node Content Typography */
+        .tf-nc h1, .tf-nc h2, .tf-nc h3, .tf-nc p { margin: 5px 0; font-size: 1em; }
+        .tf-nc table { font-size: 0.8em; margin: 5px 0; }
+
+        /* MathJax Fixes inside Nodes */
+        .tf-nc .MathJax_Display { margin: 5px 0 !important; }
+
+        /* Depth Colors */
+        .depth-0 .tf-nc { background-color: #e0f2fe; border-color: #7dd3fc; border-top: 4px solid #0284c7; }
+        .depth-1 .tf-nc { background-color: #f0fdf4; border-color: #86efac; border-top: 4px solid #16a34a; }
+        .depth-2 .tf-nc { background-color: #fdf4ff; border-color: #f0abfc; border-top: 4px solid #d946ef; }
+        .depth-3 .tf-nc { background-color: #fff7ed; border-color: #fdba74; border-top: 4px solid #ea580c; }
+
+
+        /* --- VERTICAL TREE (Org Chart Style) --- */
+
+        .tf-tree-ver ul {
+            display: flex;
+            justify-content: center;
+            padding-top: 20px;
+            position: relative;
+            gap: 20px; /* Prevent overlapping */
+        }
+
+        .tf-tree-ver li {
+            float: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0 0 0; /* Reset horizontal padding, rely on gap */
+            position: relative;
+        }
+
+        /* Connectors (Vertical) */
+
+        /* 1. Line from Parent Node down to UL (vertical) */
+        /* We increase the length to ensure it hits the bracket */
+        .tf-tree-ver .tf-nc::after {
+            content: '';
+            position: absolute;
+            bottom: -32px; /* Extends down (10px margin + 20px padding + extra overlap) */
+            left: 50%;
+            width: 2px;
+            height: 32px; /* Length of the line */
+            background-color: #94a3b8;
+            transform: translateX(-50%);
+            z-index: 1;
+        }
+        /* Only show if has children */
+        .tf-tree-ver li:not(.has-children) .tf-nc::after { display: none; }
+
+        /* 2. Horizontal Bar connecting siblings above them */
+        /* Positioned at the very top of the LI */
+        .tf-tree-ver li::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 50%;
+            width: calc(50% + 20px); /* Extend into the gap to connect with sibling */
+            height: 20px;
+            border-top: 2px solid #94a3b8;
+        }
+        .tf-tree-ver li::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: calc(50% + 20px);
+            height: 20px;
+            border-top: 2px solid #94a3b8;
+            border-left: 2px solid #94a3b8; /* Vertical line down to this node */
+        }
+
+        /* Remove horizontal connectors for single/first/last children */
+        .tf-tree-ver li:only-child::after { border-top: none; }
+        .tf-tree-ver li:only-child::before { display: none; }
+
+        .tf-tree-ver li:first-child::before { border-top: none; }
+        .tf-tree-ver li:last-child::after { border-top: none; }
+
+        /* Root UL handling */
+        .tf-tree-ver > ul { padding-top: 0; }
+        .tf-tree-ver > ul > li { padding-top: 0; }
+        .tf-tree-ver > ul > li::before,
+        .tf-tree-ver > ul > li::after { display: none; }
+
+
+        /* --- HORIZONTAL TREE (RTL) --- */
+
+        .tf-tree-hor {
+            text-align: right;
+            direction: rtl;
+        }
+
+        .tf-tree-hor ul {
+            padding-right: 40px; /* Indentation */
+            position: relative;
+        }
+
+        .tf-tree-hor li {
+            position: relative;
+            margin: 0;
+            padding: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Vertical Spine (Right side) */
+        .tf-tree-hor li::before {
+            content: '';
+            position: absolute;
+            right: -20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #94a3b8;
+        }
+
+        /* Horizontal Arm (Right to Node) */
+        .tf-tree-hor li::after {
+            content: '';
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            width: 20px;
+            height: 2px;
+            background-color: #94a3b8;
+        }
+
+        /* Trim Spine for first/last */
+        .tf-tree-hor li:first-child::before { top: 50%; }
+        .tf-tree-hor li:last-child::before { bottom: 50%; }
+        .tf-tree-hor li:only-child::before { display: none; }
+
+        /* Connector from Parent Node (Left) to Children UL */
+        .tf-tree-hor .tf-nc::after {
+            content: '';
+            position: absolute;
+            left: -20px;
+            top: 50%;
+            width: 20px;
+            height: 2px;
+            background-color: #94a3b8;
+        }
+        .tf-tree-hor li:not(.has-children) .tf-nc::after { display: none; }
+
+        /* Root adjustments */
+        .tf-tree-hor > ul { padding-right: 0; }
+        .tf-tree-hor > ul > li::before,
+        .tf-tree-hor > ul > li::after { display: none; }
+
+        .tf-tree-hor .tf-nc {
+            margin: 5px 0;
         }
 
     </style>
@@ -149,53 +399,75 @@
 </head>
 <body>
 
-<div class="app-container">
-    <div class="editor-pane">
-        <!-- Placeholder text similar to Obsidian -->
-        <textarea id="editor" placeholder="اكتب هنا... (يدعم Markdown و LaTeX)">
-# مثال على معادلات عربية
+<div class="main-wrapper">
+    <div class="toolbar">
+        <h1>محرر المعادلات والخرائط</h1>
 
-هنا يمكنك كتابة النصوص والمعادلات.
+        <div class="toggle-switch">
+            <input type="checkbox" id="viewToggle">
+            <label for="viewToggle">عرض كخريطة ذهنية</label>
+        </div>
 
-## معادلة تربيعية
-$$ \alwaysar{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}} $$
+        <select id="layoutSelect" class="toolbar-select" onchange="updatePreview()">
+            <option value="vertical">شجرية (عمودي)</option>
+            <option value="horizontal">شجرية (أفقي)</option>
+        </select>
 
-## المصفوفات
-$$ \alwaysar{
-\begin{pmatrix}
-a & b \\
-c & d
-\end{pmatrix}
-} $$
+        <button class="toolbar-btn" onclick="loadCode()">
+            <i class="fas fa-upload"></i> استيراد
+        </button>
+        <button class="toolbar-btn" onclick="saveCode()">
+            <i class="fas fa-save"></i> حفظ
+        </button>
+        <button class="toolbar-btn" onclick="exportPDF()">
+            <i class="fas fa-file-pdf"></i> تحميل PDF
+        </button>
 
-## نص عادي
-يمكنك الكتابة بالعربية والإنجليزية.
-        </textarea>
+        <!-- Hidden file input -->
+        <input type="file" id="fileInput" style="display: none" accept=".md,.txt">
     </div>
-    <div class="preview-pane">
-        <div id="preview" class="preview-content"></div>
+
+    <div class="app-container">
+        <div class="editor-pane">
+            <textarea id="editor" placeholder="اكتب هنا... (يدعم Markdown و LaTeX)">
+- قانون أوم (الجذر)
+  - (V) الجهد
+    - (الفولت)
+    - $$ V = I \times R $$
+  - (I) التيار
+    - (الأمبير)
+    - $$ I = \frac{V}{R} $$
+  - (R) المقاومة
+    - (الأوم)
+    - $$ R = \frac{V}{I} $$
+            </textarea>
+        </div>
+        <div class="preview-pane">
+            <div id="preview" class="preview-content"></div>
+        </div>
     </div>
 </div>
 
 <script>
     const editor = document.getElementById('editor');
     const preview = document.getElementById('preview');
+    const viewToggle = document.getElementById('viewToggle');
+    const layoutSelect = document.getElementById('layoutSelect');
+    const fileInput = document.getElementById('fileInput');
 
     // Configure marked.js
     marked.setOptions({
         gfm: true,
         breaks: true,
-        // Sanitize is deprecated/removed in newer marked versions, but careful with XSS if this was public.
-        // For a local tool, it's fine.
     });
 
-    function updatePreview() {
+    // Global update function
+    window.updatePreview = function() {
         const rawMarkdown = editor.value;
+        const isMindMap = viewToggle.checked;
+        const layout = layoutSelect.value;
 
-        // 1. Pre-process math to prevent marked from messing it up.
-        // We will replace $$...$$ and $...$ with placeholders.
-        // This is a simple/naive approach.
-
+        // 1. Pre-process math
         const mathExpressions = [];
         let protectedText = rawMarkdown.replace(/\$\$([\s\S]+?)\$\$/g, function(match) {
             mathExpressions.push(match);
@@ -218,17 +490,165 @@ c & d
             return mathExpressions[parseInt(index)];
         });
 
-        preview.innerHTML = html;
+        // 4. Apply Mind Map Mode if checked
+        if (isMindMap) {
+            const treeClass = layout === 'vertical' ? 'tf-tree-ver' : 'tf-tree-hor';
 
-        // 4. Render MathJax
-        MathJax.Hub.Queue(["Typeset", MathJax.Hub, preview]);
+            preview.innerHTML = `<div class="mindmap-container ${treeClass}">${html}</div>`;
+            preview.classList.add('mindmap-active');
+
+            // Post-process to wrap text nodes in .tf-nc and add styling classes
+            const treeContainer = preview.querySelector('.mindmap-container');
+            if (treeContainer) {
+                // Marked produces <ul> ... </ul> as root usually
+                // If there is a top level H1, it might be outside UL.
+                // Standard simple mind map expects list.
+                // We will try to wrap everything in a root UL if not present?
+                // Or just process what we have.
+
+                // Often people write: "# Title \n - Item 1 \n - Item 2"
+                // This becomes <h1>Title</h1> <ul><li>Item 1</li>...</ul>
+                // We want the Title to be the Root Node.
+
+                // Helper: Convert H1-H6 + UL structure into a single tree if possible
+                // Or just style the lists.
+
+                // Let's handle the lists found.
+                const uls = treeContainer.querySelectorAll('ul');
+                if (uls.length > 0) {
+                    // Process the top-most UL?
+                    // Or process all ULs recursively?
+                    // We start from the container's direct children or find the first UL.
+
+                    // Better: traverse from root.
+                    // If there is an H1 before the UL, make it the root?
+
+                    // For simplicity, we assume the structure is a List.
+                    // If there are headers, they are just content blocks.
+
+                    // We iterate all LI elements to wrap content.
+                    // But we need depth for coloring.
+
+                    // Find root ULs (ULs that are not children of LI)
+                    const rootUls = Array.from(treeContainer.children).filter(el => el.tagName === 'UL');
+                    rootUls.forEach(ul => processList(ul, 0));
+
+                    // Handle H1 as a root node if it exists before UL?
+                    // Let's leave that for now. The user example is a list.
+                }
+            }
+
+        } else {
+            preview.innerHTML = html;
+            preview.classList.remove('mindmap-active');
+        }
+
+        // 5. Render MathJax
+        if (window.MathJax) {
+            MathJax.Hub.Queue(["Typeset", MathJax.Hub, preview]);
+        }
+    };
+
+    function processList(ul, depth) {
+        const listItems = ul.children;
+        for (let li of listItems) {
+            if (li.tagName !== 'LI') continue;
+
+            li.classList.add('depth-' + (depth % 4)); // Cycle through 4 depth colors
+
+            // Check if LI has a UL child (sub-branches)
+            let hasChildren = false;
+            const children = Array.from(li.childNodes);
+            const contentNodes = [];
+            const listNodes = [];
+
+            children.forEach(node => {
+                if (node.tagName === 'UL' || node.tagName === 'OL') {
+                    hasChildren = true;
+                    listNodes.push(node);
+                } else {
+                    contentNodes.push(node);
+                }
+            });
+
+            if (hasChildren) {
+                li.classList.add('has-children');
+            }
+
+            // Wrap content in .tf-nc
+            // Filter out empty text nodes to avoid empty boxes if desired,
+            // but sometimes people leave empty bullets.
+
+            const nc = document.createElement('div');
+            nc.className = 'tf-nc';
+            contentNodes.forEach(node => nc.appendChild(node));
+
+            // Clear LI and re-append: NC first, then Lists
+            li.innerHTML = '';
+            li.appendChild(nc);
+            listNodes.forEach(subList => {
+                li.appendChild(subList);
+                processList(subList, depth + 1);
+            });
+        }
     }
 
     // Listen for changes
     editor.addEventListener('input', updatePreview);
+    viewToggle.addEventListener('change', updatePreview);
 
     // Initial render
-    updatePreview();
+    // Wait for MathJax or just run
+    setTimeout(updatePreview, 500);
+
+    // --- Toolbar Functions ---
+
+    function loadCode() {
+        fileInput.click();
+    }
+
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            editor.value = e.target.result;
+            updatePreview();
+        };
+        reader.readAsText(file);
+        // Reset input so same file can be selected again if needed
+        fileInput.value = '';
+    });
+
+    function saveCode() {
+        const text = editor.value;
+        const blob = new Blob([text], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'mindmap.md';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function exportPDF() {
+        const element = document.getElementById('preview');
+
+        // Temporarily set width to fit for PDF if needed
+        const opt = {
+            margin:       [10, 10, 10, 10],
+            filename:     'mindmap_export.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        };
+
+        html2pdf().set(opt).from(element).save();
+    }
+
 </script>
 
 </body>
