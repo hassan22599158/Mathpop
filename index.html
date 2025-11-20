@@ -244,6 +244,7 @@
             justify-content: center;
             padding-top: 20px;
             position: relative;
+            gap: 20px; /* Prevent overlapping */
         }
 
         .tf-tree-ver li {
@@ -251,21 +252,21 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px 10px 0 10px;
+            padding: 20px 0 0 0; /* Reset horizontal padding, rely on gap */
             position: relative;
         }
 
         /* Connectors (Vertical) */
 
         /* 1. Line from Parent Node down to UL (vertical) */
-        /* This is handled by .tf-nc::after */
+        /* We increase the length to ensure it hits the bracket */
         .tf-tree-ver .tf-nc::after {
             content: '';
             position: absolute;
-            bottom: -20px; /* Extends down to the horizontal bar */
+            bottom: -32px; /* Extends down (10px margin + 20px padding + extra overlap) */
             left: 50%;
             width: 2px;
-            height: 20px;
+            height: 32px; /* Length of the line */
             background-color: #94a3b8;
             transform: translateX(-50%);
             z-index: 1;
@@ -274,12 +275,13 @@
         .tf-tree-ver li:not(.has-children) .tf-nc::after { display: none; }
 
         /* 2. Horizontal Bar connecting siblings above them */
+        /* Positioned at the very top of the LI */
         .tf-tree-ver li::before {
             content: '';
             position: absolute;
             top: 0;
             right: 50%;
-            width: 50%;
+            width: calc(50% + 20px); /* Extend into the gap to connect with sibling */
             height: 20px;
             border-top: 2px solid #94a3b8;
         }
@@ -288,7 +290,7 @@
             position: absolute;
             top: 0;
             left: 50%;
-            width: 50%;
+            width: calc(50% + 20px);
             height: 20px;
             border-top: 2px solid #94a3b8;
             border-left: 2px solid #94a3b8; /* Vertical line down to this node */
