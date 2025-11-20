@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محرر المعادلات العربية</title>
+    <title>محرر المعادلات العربية والخرائط الذهنية</title>
     <link href="https://fonts.googleapis.com/css?family=Amiri" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Load marked.js for Markdown parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <!-- Load html2pdf.js for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body, html {
             height: 100%;
@@ -18,9 +21,64 @@
         }
 
         /* Layout */
+        .main-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .toolbar {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .toolbar h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            margin-left: auto; /* Pushes title to the right in RTL? No, in RTL margin-left auto pushes to LEFT. Wait. */
+            /* In RTL, flex-start is Right. We want title on Right, Buttons on Left. */
+            /* So title should be first element, buttons last. */
+        }
+
+        .toolbar-btn {
+            background-color: #34495e;
+            border: 1px solid #46627f;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .toolbar-btn:hover {
+            background-color: #46627f;
+        }
+
+        .toolbar-btn i {
+            font-size: 0.9rem;
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #34495e;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
         .app-container {
             display: flex;
-            height: 100vh;
+            flex: 1;
             flex-direction: row;
             overflow: hidden;
         }
@@ -34,7 +92,7 @@
         }
 
         .editor-pane {
-            border-left: 1px solid #e0e0e0; /* RTL: border-left is actually the separator if dir=rtl? No, flex direction follows dir. */
+            border-left: 1px solid #e0e0e0;
             background-color: #f9f9f9;
             display: flex;
             flex-direction: column;
@@ -42,7 +100,7 @@
 
         .preview-pane {
             background-color: #ffffff;
-            font-family: 'Amiri', serif; /* Default for reading content */
+            font-family: 'Amiri', serif;
             font-size: 18px;
             line-height: 1.6;
         }
@@ -57,26 +115,35 @@
             font-family: 'Consolas', 'Monaco', monospace;
             font-size: 16px;
             outline: none;
-            direction: ltr; /* Code is usually LTR */
-            text-align: right; /* But we want it right aligned for Arabic context? user choice. Let's keep LTR for code but maybe allow RTL typing. */
-            /* Actually, code editors usually default to LTR. But for Arabic text mixed in... */
-        }
-        /* Let's force LTR for the editor textarea for now as LaTeX is English-based, but text might be Arabic. */
-        textarea {
             direction: ltr;
             text-align: left;
         }
 
         /* Preview Styling */
         .preview-content {
-            max-width: 800px;
+            max-width: 100%; /* Allow full width for mind maps */
             margin: 0 auto;
         }
 
+        /* Basic Markdown Styles */
         .preview-content h1, .preview-content h2, .preview-content h3 {
             border-bottom: 1px solid #eee;
             padding-bottom: 10px;
             margin-top: 20px;
+        }
+
+        .preview-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+        }
+        .preview-content th, .preview-content td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .preview-content th {
+            background-color: #f2f2f2;
         }
 
         .preview-content code {
@@ -102,16 +169,6 @@
             color: #666;
         }
 
-        /* Header/Toolbar if needed (optional) */
-        .toolbar {
-            background: #333;
-            color: #fff;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
         /* Scrollbars */
         ::-webkit-scrollbar {
             width: 8px;
@@ -126,6 +183,489 @@
         }
         ::-webkit-scrollbar-thumb:hover {
             background: #aaa;
+        }
+
+        /* --- MIND MAP STYLES (tf-tree) --- */
+
+        .tf-tree {
+            overflow-x: auto;
+            padding: 20px;
+            text-align: center; /* Center the whole tree structure if possible, or start from right for RTL */
+        }
+
+        /* Reset list styles for tree */
+        .tf-tree ul {
+            position: relative;
+            padding: 20px 0 0 0;
+            margin: 0;
+            white-space: nowrap;
+            display: flex;
+            justify-content: center;
+            direction: rtl; /* Ensure RTL flow for branches */
+        }
+
+        .tf-tree li {
+            position: relative;
+            padding: 20px 5px 0 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Connectors (Lines) */
+        /* Line above child */
+        .tf-tree li::before, .tf-tree li::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 50%;
+            border-top: 2px solid #ccc;
+            width: 50%;
+            height: 20px;
+        }
+
+        .tf-tree li::after {
+            right: auto;
+            left: 50%;
+            border-left: 2px solid #ccc; /* Vertical line going down? No. */
+            /* Actually for standard tree:
+               We need horizontal bar connecting siblings, and vertical bar to parent.
+            */
+        }
+
+        /* Fix lines for first and last child */
+        .tf-tree li:only-child::after, .tf-tree li:only-child::before {
+            display: none;
+        }
+        .tf-tree li:only-child {
+            padding-top: 0;
+        }
+        .tf-tree li:first-child::before, .tf-tree li:last-child::after {
+            border: 0 none;
+        }
+
+        /* Adding the vertical connector from parent to children */
+        .tf-tree li::after{
+             border-top: 2px solid #ccc;
+        }
+
+        /* This "Standard Tree" CSS is tricky with flexbox.
+           Let's try a "Horizontal Tree" (Left to Right or Right to Left) as it's better for text content.
+
+           RTL Horizontal Tree:
+           Root (Right) -> Children (Left)
+        */
+
+        /* RESET for Horizontal RTL Tree */
+        .tf-tree ul {
+            display: flex;
+            flex-direction: column; /* Children are vertical list */
+            padding-right: 20px; /* Indent from parent */
+            padding-left: 0;
+            margin: 0;
+            border-right: 2px solid #ccc; /* Line connecting children */
+            position: relative;
+            justify-content: center;
+        }
+
+        /* Hide the border for the root's UL? No, root UL usually contains just one LI if it's the doc root.
+           But markdown produces <ul><li>Root<ul>...</ul></li></ul>
+        */
+
+        .tf-tree > ul {
+            border-right: none;
+            padding-right: 0;
+        }
+
+        .tf-tree li {
+            display: flex;
+            flex-direction: row; /* RTL: Content on Right, Children on Left */
+            align-items: center;
+            position: relative;
+            padding: 10px 0;
+        }
+
+        /* The Content Box (The Text) */
+        /* In Markdown, text is directly in LI or wrapped in P.
+           Marked puts text directly in LI unless paragraphs.
+           But if LI has UL, it puts text then UL.
+           We need to target the text node.
+           This is hard with CSS only if not wrapped.
+           BUT, we can style the LI itself, and the UL child separately.
+        */
+
+        /* Let's assume LI looks like: [Text/Content] [UL Children] */
+        /* We need to isolate the content.
+           Since we can't easily wrap the text node in JS without potentially breaking MathJax or complex HTML,
+           we will style the LI as the container.
+
+           Wait, if LI has `display: flex; flex-direction: row`, the text node becomes an anonymous flex item.
+           The UL becomes another flex item.
+           This works perfectly!
+        */
+
+        .tf-tree li {
+            list-style-type: none;
+        }
+
+        /* The Node Styling (Anonymous text wrapper + explicit elements) */
+        /* Actually, we can't style anonymous text nodes directly.
+           We might need a JS pass to wrap direct text in a span.
+           BUT, `marked.js` usually outputs: `<li>Text<ul>...</ul></li>`.
+           So `Text` is one item, `<ul>` is the second.
+        */
+
+        /* Connector from Parent to Child List */
+        .tf-tree li::before {
+            content: '';
+            position: absolute;
+            right: -20px; /* Extend back to the vertical line */
+            top: 50%;
+            width: 20px;
+            height: 2px;
+            background-color: #ccc;
+        }
+
+        /* Remove connector for Root */
+        .tf-tree > ul > li::before {
+            display: none;
+        }
+
+        /* Styling the Text Content (The Node) */
+        /* We can't target just the text.
+           So we will use a trick:
+           We will treat the LI as the wrapper, but we need visual distinction.
+
+           Let's inject a JS tweak in updatePreview to wrap the text content of LI in a <div class="tf-nc"> (Node Content).
+        */
+
+        .tf-nc {
+            border: 2px solid #333;
+            padding: 10px 15px;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+            min-width: 100px;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+            transition: all 0.3s;
+        }
+
+        /* Hover effect */
+        .tf-nc:hover {
+            background-color: #f0f8ff;
+            transform: scale(1.02);
+            border-color: #3498db;
+        }
+
+        /* Connector from Node to Children UL */
+        .tf-nc::after {
+            /* This would be the line to the children list */
+            /* Handled by the children UL border */
+        }
+
+        /* Connector Line Logic (Horizontal Tree RTL) */
+        /*
+           Parent (tf-nc) ----------------- (mid)
+                                            |
+                                            |--- Child 1
+                                            |
+                                            |--- Child 2
+        */
+
+        /* The UL of children has `border-right`.
+           We need a horizontal line from Parent to that border.
+        */
+
+        .tf-tree ul {
+            /* The vertical line */
+            border-right: 2px solid #ccc;
+            margin-right: 20px; /* Space for the line from parent */
+        }
+
+        /* Connector from Child Item back to Vertical Line */
+        .tf-tree li::before {
+            content: '';
+            position: absolute;
+            right: -20px; /* Reach the vertical line of the UL */
+            top: 50%;
+            width: 20px;
+            border-top: 2px solid #ccc;
+        }
+
+        /* Hide vertical line for root list */
+        .tf-tree > ul {
+            border-right: none;
+            padding-right: 0;
+            margin-right: 0;
+        }
+
+        /* Hide connector for root items */
+        .tf-tree > ul > li::before {
+            display: none;
+        }
+
+        /* Fix vertical line height: It shouldn't extend past the last child or before the first child center */
+        /* This is hard with simple border-right on UL.
+           Better approach: `::before` on each LI for the vertical part.
+        */
+
+        .tf-tree ul {
+            border-right: none; /* Disable simple border */
+        }
+
+        /* Vertical line segment for each child */
+        .tf-tree li::after {
+            content: '';
+            position: absolute;
+            right: -20px; /* Align with the horizontal connector start */
+            width: 2px;
+            background-color: #ccc;
+            /* Height needs to cover from top to bottom siblings?
+               No, simpler:
+               Each LI has a vertical line segment connecting to its neighbors?
+               Standard approach:
+               UL has a vertical line.
+               But to stop at last child...
+
+               Let's go with the "UL border + masking" or "Individual lines".
+               Individual lines is safer.
+            */
+            top: 0;
+            bottom: 0;
+        }
+
+        /* Top child: Line starts from center (50%) to bottom */
+        .tf-tree li:first-child::after {
+            top: 50%;
+        }
+
+        /* Bottom child: Line ends at center (50%) */
+        .tf-tree li:last-child::after {
+            bottom: 50%;
+        }
+
+        /* Only child: No vertical line needed if it's single path?
+           Actually if there is only 1 child, we still need a line from parent to it.
+        */
+        .tf-tree li:only-child::after {
+            display: none; /* If only 1 child, the horizontal line from parent connects directly?
+                              Wait, the vertical line is for *siblings*.
+                              If only 1 child, it aligns with parent?
+                              Yes. But we need the horizontal connector from parent.
+                           */
+        }
+
+        /* Special fix for root UL children (if multiple roots) */
+        .tf-tree > ul > li::after {
+            display: none;
+        }
+
+        /* Connector from Parent Node to the Children Block */
+        /* The parent node is `.tf-nc`. It needs a line to the right (Left in RTL? No, text direction is RTL, layout is RTL)
+           RTL: Root is Right. Children are Left.
+           So line goes Left from Parent.
+        */
+
+        .tf-nc {
+            margin-left: 40px; /* Space for the connector */
+            position: relative;
+        }
+
+        /* Line coming out of Parent (to Left) */
+        .tf-nc::before {
+            content: '';
+            position: absolute;
+            left: -20px;
+            top: 50%;
+            width: 20px;
+            height: 2px;
+            background-color: #ccc;
+        }
+
+        /* Root node doesn't have a parent to its right, but it has children to its left.
+           Wait, `::before` on `.tf-nc` is for connection TO PARENT (Right)?
+           Or TO CHILDREN (Left)?
+
+           In DOM: LI contains NC + UL.
+           RTL Flow:
+           [ NC ] -- [ UL ]
+
+           So NC is on Right. UL is on Left.
+           We need a line between NC and UL.
+        */
+
+        .tf-tree li {
+            align-items: center; /* Center vertically */
+        }
+
+        .tf-nc::after {
+            content: '';
+            position: absolute;
+            left: -20px; /* Move to left of box */
+            top: 50%;
+            width: 20px; /* Length of line to children */
+            height: 2px;
+            background-color: #ccc;
+            /* Only show if there are children?
+               CSS can't know if UL follows.
+               We can use `li:has(> ul) .tf-nc::after` if supported, or just always show and hide if no UL via JS class.
+               Or better: The line is part of the UL?
+            */
+            display: none; /* Let's handle connection via the UL/LI pseudo elements */
+        }
+
+        /* Re-thinking lines for RTL Horizontal Tree */
+
+        /*
+           [Node]
+                  | (This gap handled by margin)
+           ----------------- (Vertical Line handled by UL or LI::after)
+           |               |
+        [Child 1]       [Child 2]
+
+        Wait, that's vertical tree. Horizontal:
+
+        [Node] --- |
+                   |--- [Child 1]
+                   |
+                   |--- [Child 2]
+        */
+
+        .tf-tree ul {
+            padding-right: 40px; /* Indentation for children */
+            position: relative;
+        }
+
+        /* The vertical spine */
+        .tf-tree ul::before {
+            content: '';
+            position: absolute;
+            right: 20px; /* Position of vertical spine */
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #ccc;
+        }
+
+        /* Masking the spine for first/last child to make corners */
+        /* This is hard. Let's use the per-LI method which is robust. */
+
+        .tf-tree ul {
+            padding-right: 40px;
+            border-right: none;
+        }
+        .tf-tree ul::before { display: none; } /* Reset */
+
+        /* The horizontal arm from Spine to Child */
+        .tf-tree li::before {
+            content: '';
+            position: absolute;
+            right: -40px; /* Reach back to parent level? No, relative to LI padding */
+            /* We set padding-right on UL to 40px.
+               So LI starts 40px from the right edge of UL.
+               Spine should be at right: 0 of UL (or right: 20px).
+            */
+            top: 50%;
+            width: 20px;
+            height: 2px;
+            background-color: #ccc;
+            right: -20px; /* Adjust based on spacing */
+        }
+
+        /* The Vertical Spine Segments on LI */
+        .tf-tree li::after {
+            content: '';
+            position: absolute;
+            right: -20px; /* Align with horizontal arm start */
+            width: 2px;
+            background-color: #ccc;
+            top: 0;
+            bottom: 0;
+            /* This creates a full line. We need to trim it. */
+        }
+
+        /* First child: Start from center */
+        .tf-tree li:first-child::after {
+            top: 50%;
+        }
+        /* Last child: End at center */
+        .tf-tree li:last-child::after {
+            bottom: 50%;
+        }
+        /* Only child: No spine needed? Just horizontal arm?
+           Yes, if only one child, it connects directly.
+        */
+        .tf-tree li:only-child::after {
+            display: none;
+        }
+
+        /* Connection from Parent Content to Spine */
+        /* This is the tricky part. The parent is in the `li` ABOVE the `ul`.
+           HTML:
+           <li>
+             <div class="tf-nc">Parent</div>
+             <ul> ... </ul>
+           </li>
+
+           So `.tf-nc` needs a line to its right connecting to the UL's spine.
+           UL is a flex item next to NC (because LI is flex-row).
+        */
+
+        .tf-nc {
+            position: relative;
+        }
+
+        /* Line from NC to UL */
+        .tf-nc::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: -20px; /* Left side of NC (since RTL) points to children */
+            width: 20px;
+            height: 2px;
+            background-color: #ccc;
+        }
+
+        /* Hide this line if no children?
+           We will use CSS: `li:not(:has(ul)) .tf-nc::after { display: none; }`
+           Support for :has is good in modern browsers. If not, we need JS.
+           Let's add a JS class `has-children`.
+        */
+
+        /* Remove spine for the Root's children list (if it's top level) */
+        .tf-tree > ul > li::after {
+            display: none; /* No spine for top level items */
+        }
+        .tf-tree > ul > li::before {
+            display: none; /* No arm for top level items */
+        }
+
+        /* Colors and Beautification */
+        .tf-nc {
+            background: linear-gradient(to bottom right, #ffffff, #f9f9f9);
+            border: 1px solid #ddd;
+            border-top: 3px solid #3498db; /* Colorful top */
+            border-radius: 8px;
+            color: #333;
+            font-weight: bold;
+            min-width: 120px;
+        }
+
+        /* Different colors for levels? */
+        .tf-tree > ul > li > .tf-nc { border-top-color: #e74c3c; } /* Level 1 */
+        .tf-tree > ul > li > ul > li > .tf-nc { border-top-color: #2ecc71; } /* Level 2 */
+
+        /* Table support inside nodes */
+        .tf-nc table {
+            font-size: 0.8em;
+            margin: 5px 0;
+        }
+
+        /* Equation support */
+        .tf-nc .MathJax_Display {
+            margin: 5px 0 !important;
         }
 
     </style>
@@ -149,53 +689,71 @@
 </head>
 <body>
 
-<div class="app-container">
-    <div class="editor-pane">
-        <!-- Placeholder text similar to Obsidian -->
-        <textarea id="editor" placeholder="اكتب هنا... (يدعم Markdown و LaTeX)">
-# مثال على معادلات عربية
+<div class="main-wrapper">
+    <div class="toolbar">
+        <h1>محرر المعادلات والخرائط</h1>
 
-هنا يمكنك كتابة النصوص والمعادلات.
+        <div class="toggle-switch">
+            <input type="checkbox" id="viewToggle">
+            <label for="viewToggle">عرض كخريطة ذهنية</label>
+        </div>
 
-## معادلة تربيعية
-$$ \alwaysar{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}} $$
+        <button class="toolbar-btn" onclick="loadCode()">
+            <i class="fas fa-upload"></i> استيراد ملف
+        </button>
+        <button class="toolbar-btn" onclick="saveCode()">
+            <i class="fas fa-save"></i> حفظ ملف
+        </button>
+        <button class="toolbar-btn" onclick="exportPDF()">
+            <i class="fas fa-file-pdf"></i> تحميل PDF
+        </button>
 
-## المصفوفات
-$$ \alwaysar{
-\begin{pmatrix}
-a & b \\
-c & d
-\end{pmatrix}
-} $$
-
-## نص عادي
-يمكنك الكتابة بالعربية والإنجليزية.
-        </textarea>
+        <!-- Hidden file input -->
+        <input type="file" id="fileInput" style="display: none" accept=".md,.txt">
     </div>
-    <div class="preview-pane">
-        <div id="preview" class="preview-content"></div>
+
+    <div class="app-container">
+        <div class="editor-pane">
+            <textarea id="editor" placeholder="اكتب هنا... (يدعم Markdown و LaTeX)">
+# خريطة ذهنية للمادة
+
+- المفهوم الأساسي
+  - تعريف المفهوم
+    - تفاصيل دقيقة
+    - $$ E = mc^2 $$
+  - الخصائص
+    - خاصية 1
+    - خاصية 2
+- العمليات الرياضية
+  - الجمع
+    - $$ 1 + 1 = 2 $$
+  - المصفوفات
+    - $$ \alwaysar{ \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix} } $$
+            </textarea>
+        </div>
+        <div class="preview-pane">
+            <div id="preview" class="preview-content"></div>
+        </div>
     </div>
 </div>
 
 <script>
     const editor = document.getElementById('editor');
     const preview = document.getElementById('preview');
+    const viewToggle = document.getElementById('viewToggle');
+    const fileInput = document.getElementById('fileInput');
 
     // Configure marked.js
     marked.setOptions({
         gfm: true,
         breaks: true,
-        // Sanitize is deprecated/removed in newer marked versions, but careful with XSS if this was public.
-        // For a local tool, it's fine.
     });
 
     function updatePreview() {
         const rawMarkdown = editor.value;
+        const isMindMap = viewToggle.checked;
 
-        // 1. Pre-process math to prevent marked from messing it up.
-        // We will replace $$...$$ and $...$ with placeholders.
-        // This is a simple/naive approach.
-
+        // 1. Pre-process math
         const mathExpressions = [];
         let protectedText = rawMarkdown.replace(/\$\$([\s\S]+?)\$\$/g, function(match) {
             mathExpressions.push(match);
@@ -218,17 +776,114 @@ c & d
             return mathExpressions[parseInt(index)];
         });
 
-        preview.innerHTML = html;
+        // 4. Apply Mind Map Mode if checked
+        if (isMindMap) {
+            // Wrap content in the tree container
+            preview.innerHTML = `<div class="tf-tree tf-gap-sm">${html}</div>`;
+            preview.classList.add('mindmap-active');
 
-        // 4. Render MathJax
-        MathJax.Hub.Queue(["Typeset", MathJax.Hub, preview]);
+            // Post-process to wrap text nodes in .tf-nc
+            const treeContainer = preview.querySelector('.tf-tree');
+            if (treeContainer) {
+                // Function to wrap direct text content of LI
+                const listItems = treeContainer.querySelectorAll('li');
+                listItems.forEach(li => {
+                    // We need to move all non-UL children into a new div
+                    // But we must preserve order?
+                    // Usually Marked outputs: [Text content] [<ul>Children</ul>]
+                    // Or [Text content] (if no children)
+
+                    const children = Array.from(li.childNodes);
+                    const contentNodes = [];
+                    const listNodes = [];
+
+                    children.forEach(node => {
+                        if (node.tagName === 'UL' || node.tagName === 'OL') {
+                            listNodes.push(node);
+                        } else {
+                            contentNodes.push(node);
+                        }
+                    });
+
+                    if (contentNodes.length > 0) {
+                        const span = document.createElement('div');
+                        span.className = 'tf-nc';
+                        contentNodes.forEach(node => span.appendChild(node));
+
+                        // Clear LI and re-append
+                        li.innerHTML = '';
+                        li.appendChild(span);
+                        listNodes.forEach(ul => li.appendChild(ul));
+                    }
+                });
+            }
+
+        } else {
+            preview.innerHTML = html;
+            preview.classList.remove('mindmap-active');
+        }
+
+        // 5. Render MathJax
+        if (window.MathJax) {
+            MathJax.Hub.Queue(["Typeset", MathJax.Hub, preview]);
+        }
     }
 
     // Listen for changes
     editor.addEventListener('input', updatePreview);
+    viewToggle.addEventListener('change', updatePreview);
 
     // Initial render
     updatePreview();
+
+    // --- Toolbar Functions ---
+
+    function loadCode() {
+        fileInput.click();
+    }
+
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            editor.value = e.target.result;
+            updatePreview();
+        };
+        reader.readAsText(file);
+        // Reset input so same file can be selected again if needed
+        fileInput.value = '';
+    });
+
+    function saveCode() {
+        const text = editor.value;
+        const blob = new Blob([text], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'mindmap.md'; // Default filename
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function exportPDF() {
+        // Configure options
+        const element = document.getElementById('preview');
+        const opt = {
+            margin:       [10, 10, 10, 10], // Top, left, bottom, right (mm)
+            filename:     'mindmap_export.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' } // Landscape usually better for maps
+        };
+
+        // Promise-based usage
+        html2pdf().set(opt).from(element).save();
+    }
+
 </script>
 
 </body>
