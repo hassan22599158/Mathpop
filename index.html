@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محرر المعادلات العربية</title>
+    <title>محرر المعادلات العربية والخرائط الذهنية</title>
     <link href="https://fonts.googleapis.com/css?family=Amiri" rel="stylesheet" type="text/css">
     <!-- Load marked.js for Markdown parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
@@ -34,7 +34,7 @@
         }
 
         .editor-pane {
-            border-left: 1px solid #e0e0e0; /* RTL: border-left is actually the separator if dir=rtl? No, flex direction follows dir. */
+            border-left: 1px solid #e0e0e0;
             background-color: #f9f9f9;
             display: flex;
             flex-direction: column;
@@ -42,7 +42,7 @@
 
         .preview-pane {
             background-color: #ffffff;
-            font-family: 'Amiri', serif; /* Default for reading content */
+            font-family: 'Amiri', serif;
             font-size: 18px;
             line-height: 1.6;
         }
@@ -57,19 +57,13 @@
             font-family: 'Consolas', 'Monaco', monospace;
             font-size: 16px;
             outline: none;
-            direction: ltr; /* Code is usually LTR */
-            text-align: right; /* But we want it right aligned for Arabic context? user choice. Let's keep LTR for code but maybe allow RTL typing. */
-            /* Actually, code editors usually default to LTR. But for Arabic text mixed in... */
-        }
-        /* Let's force LTR for the editor textarea for now as LaTeX is English-based, but text might be Arabic. */
-        textarea {
             direction: ltr;
             text-align: left;
         }
 
         /* Preview Styling */
         .preview-content {
-            max-width: 800px;
+            max-width: 1000px;
             margin: 0 auto;
         }
 
@@ -102,14 +96,162 @@
             color: #666;
         }
 
-        /* Header/Toolbar if needed (optional) */
-        .toolbar {
-            background: #333;
-            color: #fff;
-            padding: 10px 20px;
+        /* Table Styling in standard preview */
+        .preview-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 10px 0;
+        }
+        .preview-content table th, .preview-content table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .preview-content table th {
+            background-color: #f2f2f2;
+        }
+
+        /* Mindmap / CSS Tree Styles */
+        .mindmap-container {
+            overflow: auto;
+            padding: 40px 20px;
+            background: #f8f9fa;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            text-align: center;
+        }
+
+        .tf-tree {
+            display: inline-flex;
+            direction: ltr; /* Structure is LTR to ensure connections work */
+        }
+
+        /* Restore RTL for content inside tree nodes */
+        .tf-tree .tf-nc {
+            direction: rtl;
+            text-align: right;
+        }
+
+        .tf-tree ul {
             display: flex;
-            justify-content: space-between;
+            padding-top: 20px;
+            position: relative;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        .tf-tree li {
+            list-style-type: none;
+            position: relative;
+            padding: 20px 5px 0 5px;
+            display: flex;
+            flex-direction: column;
             align-items: center;
+        }
+
+        /* Connecting lines */
+        .tf-tree li::before, .tf-tree li::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 50%;
+            border-top: 2px solid #ccc;
+            width: 50%;
+            height: 20px;
+        }
+
+        .tf-tree li::after {
+            right: auto;
+            left: 50%;
+            border-left: 2px solid #ccc;
+        }
+
+        .tf-tree li:only-child::after, .tf-tree li:only-child::before {
+            display: none;
+        }
+        .tf-tree li:only-child {
+            padding-top: 0;
+        }
+
+        .tf-tree li:first-child::before {
+            border: 0 none;
+        }
+        .tf-tree li:last-child::after {
+            border: 0 none;
+        }
+
+        .tf-tree li:last-child::before {
+            border-right: 2px solid #ccc;
+            border-radius: 0 5px 0 0;
+        }
+        .tf-tree li:first-child::after {
+            border-radius: 5px 0 0 0;
+        }
+
+        .tf-tree ul ul::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            border-left: 2px solid #ccc;
+            width: 0;
+            height: 20px;
+        }
+
+        /* Node Styling */
+        .tf-nc {
+            border: 1px solid #dcdcdc;
+            padding: 15px;
+            text-decoration: none;
+            color: #333;
+            background: #fff;
+            display: inline-block;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
+            min-width: 180px;
+            max-width: 350px;
+            overflow: auto; /* Handle overflow for tables/math */
+            position: relative;
+            z-index: 1;
+            transition: all 0.2s ease;
+        }
+
+        .tf-nc:hover {
+            box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .tf-nc h1, .tf-nc h2, .tf-nc h3, .tf-nc h4, .tf-nc h5 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #2c3e50;
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 5px;
+        }
+
+        .tf-nc p {
+            margin: 5px 0;
+            font-size: 0.95em;
+        }
+
+        /* Tables inside mindmaps */
+        .tf-nc table {
+            font-size: 0.85em;
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 8px;
+        }
+        .tf-nc table th, .tf-nc table td {
+            border: 1px solid #eee;
+            padding: 4px;
+            text-align: center;
+        }
+        .tf-nc table th {
+            background-color: #f9f9f9;
+            font-weight: bold;
         }
 
         /* Scrollbars */
@@ -121,11 +263,11 @@
             background: #f1f1f1;
         }
         ::-webkit-scrollbar-thumb {
-            background: #ccc;
+            background: #c1c1c1;
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #aaa;
+            background: #a8a8a8;
         }
 
     </style>
@@ -151,26 +293,7 @@
 
 <div class="app-container">
     <div class="editor-pane">
-        <!-- Placeholder text similar to Obsidian -->
-        <textarea id="editor" placeholder="اكتب هنا... (يدعم Markdown و LaTeX)">
-# مثال على معادلات عربية
-
-هنا يمكنك كتابة النصوص والمعادلات.
-
-## معادلة تربيعية
-$$ \alwaysar{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}} $$
-
-## المصفوفات
-$$ \alwaysar{
-\begin{pmatrix}
-a & b \\
-c & d
-\end{pmatrix}
-} $$
-
-## نص عادي
-يمكنك الكتابة بالعربية والإنجليزية.
-        </textarea>
+        <textarea id="editor" placeholder="اكتب هنا..."></textarea>
     </div>
     <div class="preview-pane">
         <div id="preview" class="preview-content"></div>
@@ -185,32 +308,132 @@ c & d
     marked.setOptions({
         gfm: true,
         breaks: true,
-        // Sanitize is deprecated/removed in newer marked versions, but careful with XSS if this was public.
-        // For a local tool, it's fine.
     });
+
+    // Mind Map Parser Logic
+    function parseMindMap(input) {
+        // Split lines but preserve empty ones for paragraph breaks in bodies
+        const lines = input.split('\n');
+        if (lines.length === 0) return '';
+
+        const root = { children: [], level: -1 };
+        const stack = [root];
+
+        lines.forEach(line => {
+            // Detect indentation: assume 2 spaces per level
+            // Note: Tabs should ideally be converted to spaces or handled.
+            // Here we just count whitespace length.
+            const match = line.match(/^(\s*)/);
+            const indent = match ? match[1].length : 0;
+            const level = Math.floor(indent / 2);
+
+            let content = line.trim();
+
+            // Determine if it's a new node header (starts with - or *)
+            if (content.startsWith('- ') || content.startsWith('* ')) {
+                content = content.substring(2); // Remove bullet
+                const newNode = {
+                    content: content,
+                    body: "",
+                    children: [],
+                    level: level
+                };
+
+                // Adjust stack to find correct parent
+                while (stack.length > level + 1) {
+                    stack.pop();
+                }
+
+                // Fallback for skipping levels (e.g. level 0 to 2 directly)
+                // We attach to the last known parent in the stack
+                const parent = stack[stack.length - 1];
+                parent.children.push(newNode);
+                stack.push(newNode);
+
+            } else {
+                // It is body content for the current node
+                // If line is empty, we just add a newline to body to preserve paragraph breaks
+                const currentNode = stack[stack.length - 1];
+                if (currentNode !== root) {
+                    // Don't add extra newline at the very start
+                    if (currentNode.body.length > 0) {
+                        currentNode.body += "\n" + content;
+                    } else {
+                        currentNode.body += content;
+                    }
+                }
+            }
+        });
+
+        function renderNode(node) {
+            let html = '<li>';
+            html += '<div class="tf-nc">';
+
+            // Construct the Markdown content for the node
+            let fullText = "";
+            if(node.content) fullText += "#### " + node.content + "\n\n"; // Add double newline for safety
+            if(node.body) fullText += node.body;
+
+            // Use marked to render the inner content of the card
+            html += marked.parse(fullText);
+
+            html += '</div>';
+
+            if (node.children.length > 0) {
+                html += '<ul>';
+                node.children.forEach(child => {
+                    html += renderNode(child);
+                });
+                html += '</ul>';
+            }
+
+            html += '</li>';
+            return html;
+        }
+
+        let output = '<div class="mindmap-container"><div class="tf-tree"><ul>';
+        // Render all children of the virtual root
+        if (root.children.length === 0) {
+             return '<div class="alert">لا توجد عقد لعرضها (تأكد من استخدام - أو *)</div>';
+        }
+        root.children.forEach(child => {
+            output += renderNode(child);
+        });
+        output += '</ul></div></div>';
+
+        return output;
+    }
 
     function updatePreview() {
         const rawMarkdown = editor.value;
 
         // 1. Pre-process math to prevent marked from messing it up.
         // We will replace $$...$$ and $...$ with placeholders.
-        // This is a simple/naive approach.
-
         const mathExpressions = [];
+
+        // Protect block math
         let protectedText = rawMarkdown.replace(/\$\$([\s\S]+?)\$\$/g, function(match) {
             mathExpressions.push(match);
             return "MATH_BLOCK_" + (mathExpressions.length - 1);
         });
 
+        // Protect inline math
         protectedText = protectedText.replace(/\$([^\$\n]+?)\$/g, function(match) {
              mathExpressions.push(match);
             return "MATH_INLINE_" + (mathExpressions.length - 1);
         });
 
-        // 2. Render Markdown
+        // 2. Detect and parse custom blocks (Mind Map)
+        // Look for ```mindmap ... ```
+        protectedText = protectedText.replace(/```mindmap([\s\S]*?)```/g, function(match, content) {
+            return parseMindMap(content);
+        });
+
+        // 3. Render standard Markdown for the rest
         let html = marked.parse(protectedText);
 
-        // 3. Restore math
+        // 4. Restore math
+        // Restore in multiple passes or regex
         html = html.replace(/MATH_BLOCK_(\d+)/g, function(match, index) {
             return mathExpressions[parseInt(index)];
         });
@@ -220,14 +443,56 @@ c & d
 
         preview.innerHTML = html;
 
-        // 4. Render MathJax
+        // 5. Render MathJax
         MathJax.Hub.Queue(["Typeset", MathJax.Hub, preview]);
     }
 
     // Listen for changes
     editor.addEventListener('input', updatePreview);
 
-    // Initial render
+    // Set default text if empty
+    const defaultText = `# مثال على الخرائط الذهنية
+
+هذا المحرر يدعم كتابة الملاحظات وعرضها بشكل حي. يمكنك كتابة **معادلات رياضية** باستخدام LaTeX وإنشاء **خرائط ذهنية**.
+
+## مجموعات الأعداد
+
+\`\`\`mindmap
+- **مجموعات الأعداد**
+  تصنيف الأعداد في الرياضيات
+
+  - **الأعداد الطبيعية ($N$)**
+    هي أعداد العد الموجبة + الصفر.
+    $$ N = \\{ 0, 1, 2, 3, ... \\} $$
+
+  - **الأعداد الصحيحة ($Z$)**
+    تشمل الموجبة والسالبة والصفر.
+    $$ Z = \\{ ..., -1, 0, 1, ... \\} $$
+
+  - **الأعداد النسبية ($Q$)**
+    أي عدد يمكن كتابته على صورة كسر.
+    $$ Q = \\{ \\frac{a}{b} : a,b \\in Z, b \\neq 0 \\} $$
+    | مثال | القيمة |
+    |---|---|
+    | نصف | $\\frac{1}{2}$ |
+    | ربع | $0.25$ |
+
+  - **الأعداد غير النسبية ($Q'$)**
+    أعداد لا يمكن كتابتها ككسر (جذور صماء، $\\pi$).
+    $$ \\sqrt{2}, \\pi $$
+\`\`\`
+
+يمكنك أيضاً الكتابة خارج الخريطة:
+المعادلة التربيعية: $$ x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a} $$
+`;
+
+    if (!editor.value) {
+        editor.value = defaultText;
+    } else if (editor.value.trim().length < 10) {
+         // Reset if content is just previous boilerplate
+         editor.value = defaultText;
+    }
+
     updatePreview();
 </script>
 
