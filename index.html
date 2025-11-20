@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار المعادلات العربية</title>
+    <link href="https://fonts.googleapis.com/css?family=Amiri" rel="stylesheet" type="text/css">
+    <style>
+        body {
+            font-family: 'Amiri', serif;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+        }
+        .input-section {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            font-size: 16px;
+            padding: 10px;
+            box-sizing: border-box;
+            direction: ltr;
+            font-family: monospace;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .output-section {
+            margin-top: 20px;
+            font-size: 24px;
+            text-align: center;
+            min-height: 100px;
+            border: 1px dashed #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: right;
+        }
+        th {
+            background-color: #f9f9f9;
+        }
+        .code {
+            direction: ltr;
+            font-family: monospace;
+            background: #f0f0f0;
+            padding: 2px 5px;
+        }
+    </style>
+
+    <script type="text/x-mathjax-config">
+        MathJax.Ajax.config.path["arabic"] = "https://cdn.jsdelivr.net/gh/Edraak/arabic-mathjax@1.1/dist";
+        MathJax.Hub.Config({
+            extensions: ["[arabic]/arabic.js"],
+            tex2jax: {
+                inlineMath: [["$", "$"], ["\\(", "\\)"]],
+                displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+                processEscapes: true
+            },
+            "HTML-CSS": {
+                undefinedFamily: "Amiri"
+            }
+        });
+    </script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_HTMLorMML"></script>
+</head>
+<body>
+
+<div class="container">
+    <h1>اختبار المعادلات العربية (Arabic MathJax)</h1>
+
+    <div class="input-section">
+        <h3>جرب معادلتك هنا:</h3>
+        <p>اكتب كود LaTeX بالأسفل (مثال: <code>\alwaysar{x = 10}</code>)</p>
+        <textarea id="math-input">\alwaysar{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}</textarea>
+        <button onclick="renderMath()">عرض المعادلة</button>
+        <div id="math-output" class="output-section">
+            $$ \alwaysar{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}} $$
+        </div>
+    </div>
+
+    <div class="examples">
+        <h3>أمثلة (Test Cases)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>المعادلة (English)</th>
+                    <th>الكود</th>
+                    <th>النتيجة (Arabic)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>x = 10</td>
+                    <td><span class="code">\alwaysar{x = 10}</span></td>
+                    <td>$$ \alwaysar{x = 10} $$</td>
+                </tr>
+                <tr>
+                    <td>Square Root</td>
+                    <td><span class="code">\alwaysar{\sqrt{2}}</span></td>
+                    <td>$$ \alwaysar{\sqrt{2}} $$</td>
+                </tr>
+                <tr>
+                    <td>Quadratic Formula</td>
+                    <td><span class="code">\alwaysar{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}</span></td>
+                    <td>$$ \alwaysar{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}} $$</td>
+                </tr>
+                <tr>
+                    <td>Integral</td>
+                    <td><span class="code">\alwaysar{\int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}}</span></td>
+                    <td>$$ \alwaysar{\int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}} $$</td>
+                </tr>
+                <tr>
+                    <td>Summation</td>
+                    <td><span class="code">\alwaysar{\sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}}</span></td>
+                    <td>$$ \alwaysar{\sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}} $$</td>
+                </tr>
+                 <tr>
+                    <td>Trigonometry</td>
+                    <td><span class="code">\alwaysar{\sin(x)^2 + \cos(x)^2 = 1}</span></td>
+                    <td>$$ \alwaysar{\sin(x)^2 + \cos(x)^2 = 1} $$</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function renderMath() {
+        var input = document.getElementById('math-input').value;
+        var output = document.getElementById('math-output');
+        output.innerText = '$$ ' + input + ' $$';
+        MathJax.Hub.Queue(["Typeset", MathJax.Hub, output]);
+    }
+</script>
+
+</body>
+</html>
