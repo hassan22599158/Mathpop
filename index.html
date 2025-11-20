@@ -3,81 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>اختبار المعادلات العربية</title>
+    <title>محرر المعادلات العربية</title>
     <link href="https://fonts.googleapis.com/css?family=Amiri" rel="stylesheet" type="text/css">
+    <!-- Load marked.js for Markdown parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
     <style>
-        body {
-            font-family: 'Amiri', serif;
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #ffffff;
+            color: #333;
+        }
+
+        /* Layout */
+        .app-container {
+            display: flex;
+            height: 100vh;
+            flex-direction: row;
+            overflow: hidden;
+        }
+
+        .editor-pane, .preview-pane {
+            flex: 1;
+            height: 100%;
+            overflow-y: auto;
             padding: 20px;
-            background-color: #f4f4f4;
+            box-sizing: border-box;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+
+        .editor-pane {
+            border-left: 1px solid #e0e0e0; /* RTL: border-left is actually the separator if dir=rtl? No, flex direction follows dir. */
+            background-color: #f9f9f9;
+            display: flex;
+            flex-direction: column;
         }
-        h1 {
-            text-align: center;
+
+        .preview-pane {
+            background-color: #ffffff;
+            font-family: 'Amiri', serif; /* Default for reading content */
+            font-size: 18px;
+            line-height: 1.6;
         }
-        .input-section {
-            margin-bottom: 20px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 20px;
-        }
+
+        /* Editor Styling */
         textarea {
             width: 100%;
-            height: 100px;
-            font-size: 16px;
-            padding: 10px;
-            box-sizing: border-box;
-            direction: ltr;
-            font-family: monospace;
-        }
-        button {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            background: #007bff;
-            color: white;
+            height: 100%;
             border: none;
-            font-size: 18px;
-            cursor: pointer;
-            margin-top: 10px;
+            resize: none;
+            background-color: transparent;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 16px;
+            outline: none;
+            direction: ltr; /* Code is usually LTR */
+            text-align: right; /* But we want it right aligned for Arabic context? user choice. Let's keep LTR for code but maybe allow RTL typing. */
+            /* Actually, code editors usually default to LTR. But for Arabic text mixed in... */
         }
-        button:hover {
-            background: #0056b3;
-        }
-        .output-section {
-            margin-top: 20px;
-            font-size: 24px;
-            text-align: center;
-            min-height: 100px;
-            border: 1px dashed #ccc;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: right;
-        }
-        th {
-            background-color: #f9f9f9;
-        }
-        .code {
+        /* Let's force LTR for the editor textarea for now as LaTeX is English-based, but text might be Arabic. */
+        textarea {
             direction: ltr;
-            font-family: monospace;
-            background: #f0f0f0;
-            padding: 2px 5px;
+            text-align: left;
         }
+
+        /* Preview Styling */
+        .preview-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .preview-content h1, .preview-content h2, .preview-content h3 {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-top: 20px;
+        }
+
+        .preview-content code {
+            background-color: #f5f5f5;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .preview-content pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            direction: ltr;
+            text-align: left;
+        }
+
+        .preview-content blockquote {
+            border-right: 4px solid #ccc;
+            margin: 0;
+            padding-right: 15px;
+            color: #666;
+        }
+
+        /* Header/Toolbar if needed (optional) */
+        .toolbar {
+            background: #333;
+            color: #fff;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #aaa;
+        }
+
     </style>
 
     <script type="text/x-mathjax-config">
@@ -87,7 +137,8 @@
             tex2jax: {
                 inlineMath: [["$", "$"], ["\\(", "\\)"]],
                 displayMath: [["$$", "$$"], ["\\[", "\\]"]],
-                processEscapes: true
+                processEscapes: true,
+                skipTags: ["script", "noscript", "style", "textarea", "pre", "code"]
             },
             "HTML-CSS": {
                 undefinedFamily: "Amiri"
@@ -98,72 +149,86 @@
 </head>
 <body>
 
-<div class="container">
-    <h1>اختبار المعادلات العربية (Arabic MathJax)</h1>
+<div class="app-container">
+    <div class="editor-pane">
+        <!-- Placeholder text similar to Obsidian -->
+        <textarea id="editor" placeholder="اكتب هنا... (يدعم Markdown و LaTeX)">
+# مثال على معادلات عربية
 
-    <div class="input-section">
-        <h3>جرب معادلتك هنا:</h3>
-        <p>اكتب كود LaTeX بالأسفل (مثال: <code>\alwaysar{x = 10}</code>)</p>
-        <textarea id="math-input">\alwaysar{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}</textarea>
-        <button onclick="renderMath()">عرض المعادلة</button>
-        <div id="math-output" class="output-section">
-            $$ \alwaysar{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}} $$
-        </div>
+هنا يمكنك كتابة النصوص والمعادلات.
+
+## معادلة تربيعية
+$$ \alwaysar{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}} $$
+
+## المصفوفات
+$$ \alwaysar{
+\begin{pmatrix}
+a & b \\
+c & d
+\end{pmatrix}
+} $$
+
+## نص عادي
+يمكنك الكتابة بالعربية والإنجليزية.
+        </textarea>
     </div>
-
-    <div class="examples">
-        <h3>أمثلة (Test Cases)</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>المعادلة (English)</th>
-                    <th>الكود</th>
-                    <th>النتيجة (Arabic)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>x = 10</td>
-                    <td><span class="code">\alwaysar{x = 10}</span></td>
-                    <td>$$ \alwaysar{x = 10} $$</td>
-                </tr>
-                <tr>
-                    <td>Square Root</td>
-                    <td><span class="code">\alwaysar{\sqrt{2}}</span></td>
-                    <td>$$ \alwaysar{\sqrt{2}} $$</td>
-                </tr>
-                <tr>
-                    <td>Quadratic Formula</td>
-                    <td><span class="code">\alwaysar{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}</span></td>
-                    <td>$$ \alwaysar{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}} $$</td>
-                </tr>
-                <tr>
-                    <td>Integral</td>
-                    <td><span class="code">\alwaysar{\int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}}</span></td>
-                    <td>$$ \alwaysar{\int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}} $$</td>
-                </tr>
-                <tr>
-                    <td>Summation</td>
-                    <td><span class="code">\alwaysar{\sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}}</span></td>
-                    <td>$$ \alwaysar{\sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}} $$</td>
-                </tr>
-                 <tr>
-                    <td>Trigonometry</td>
-                    <td><span class="code">\alwaysar{\sin(x)^2 + \cos(x)^2 = 1}</span></td>
-                    <td>$$ \alwaysar{\sin(x)^2 + \cos(x)^2 = 1} $$</td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="preview-pane">
+        <div id="preview" class="preview-content"></div>
     </div>
 </div>
 
 <script>
-    function renderMath() {
-        var input = document.getElementById('math-input').value;
-        var output = document.getElementById('math-output');
-        output.innerText = '$$ ' + input + ' $$';
-        MathJax.Hub.Queue(["Typeset", MathJax.Hub, output]);
+    const editor = document.getElementById('editor');
+    const preview = document.getElementById('preview');
+
+    // Configure marked.js
+    marked.setOptions({
+        gfm: true,
+        breaks: true,
+        // Sanitize is deprecated/removed in newer marked versions, but careful with XSS if this was public.
+        // For a local tool, it's fine.
+    });
+
+    function updatePreview() {
+        const rawMarkdown = editor.value;
+
+        // 1. Pre-process math to prevent marked from messing it up.
+        // We will replace $$...$$ and $...$ with placeholders.
+        // This is a simple/naive approach.
+
+        const mathExpressions = [];
+        let protectedText = rawMarkdown.replace(/\$\$([\s\S]+?)\$\$/g, function(match) {
+            mathExpressions.push(match);
+            return "MATH_BLOCK_" + (mathExpressions.length - 1);
+        });
+
+        protectedText = protectedText.replace(/\$([^\$\n]+?)\$/g, function(match) {
+             mathExpressions.push(match);
+            return "MATH_INLINE_" + (mathExpressions.length - 1);
+        });
+
+        // 2. Render Markdown
+        let html = marked.parse(protectedText);
+
+        // 3. Restore math
+        html = html.replace(/MATH_BLOCK_(\d+)/g, function(match, index) {
+            return mathExpressions[parseInt(index)];
+        });
+        html = html.replace(/MATH_INLINE_(\d+)/g, function(match, index) {
+            return mathExpressions[parseInt(index)];
+        });
+
+        preview.innerHTML = html;
+
+        // 4. Render MathJax
+        MathJax.Hub.Queue(["Typeset", MathJax.Hub, preview]);
     }
+
+    // Listen for changes
+    editor.addEventListener('input', updatePreview);
+
+    // Initial render
+    updatePreview();
 </script>
 
 </body>
